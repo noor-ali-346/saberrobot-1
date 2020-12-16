@@ -3,7 +3,7 @@ from io import BytesIO
 
 from telegram import ParseMode, ChatAction
 from telegram.error import BadRequest, TelegramError
-from telegram.ext import CommandHandler, MessageHandler, Filters
+from telegram.ext import CommandHandler, MessageHandler, Filters, run_async
 from telegram.utils.helpers import mention_html
 
 import tg_bot.modules.sql.global_bans_sql as sql
@@ -67,7 +67,7 @@ UNGBAN_ERRORS = {
     "User not found",
 }
 
-
+@run_async
 @typing_action
 def gban(update, context):
     message = update.effective_message
@@ -286,7 +286,7 @@ def ungban(update, context):
     )
     message.reply_text("Person has been un-gbanned.")
 
-
+@run_async
 @send_action(ChatAction.UPLOAD_DOCUMENT)
 def gbanlist(update, context):
     banned_users = sql.get_gban_list()
@@ -343,7 +343,7 @@ def check_and_ban(update, user_id, should_message=True):
             )
             return
 
-
+@run_async
 def enforce_gban(update, context):
     # Not using @restrict handler to avoid spamming - just ignore if cant gban.
     if (
@@ -369,7 +369,7 @@ def enforce_gban(update, context):
             if user and not is_user_admin(chat, user.id):
                 check_and_ban(update, user.id, should_message=False)
 
-
+@run_async
 @user_admin
 @typing_action
 def gbanstat(update, context):

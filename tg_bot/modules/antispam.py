@@ -50,7 +50,7 @@ UNGBAN_ERRORS = {
 @run_async
 @support_plus
 def gban(update, context):  
-    args = context.args
+    args = context.args,bot = context.bot
     message = update.effective_message
     user = update.effective_user
     chat = update.effective_chat

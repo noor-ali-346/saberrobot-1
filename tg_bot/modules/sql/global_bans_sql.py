@@ -20,11 +20,37 @@ class GloballyBannedUsers(BASE):
         return "<GBanned User {} ({})>".format(self.name, self.user_id)
 
     def to_dict(self):
-        return {"user_id": self.user_id, "name": self.name, "reason": self.reason}
+        return {
+            "user_id": self.user_id,
+            "name": self.name,
+            "reason": self.reason
+        }
 
 
-class GbanSettings(BASE):
-    __tablename__ = "gban_settings"
+class GloballyMutedUsers(BASE):
+    __tablename__ = "gmutes"
+    user_id = Column(Integer, primary_key=True)
+    name = Column(UnicodeText, nullable=False)
+    reason = Column(UnicodeText)
+
+    def __init__(self, user_id, name, reason=None):
+        self.user_id = user_id
+        self.name = name
+        self.reason = reason
+
+    def __repr__(self):
+        return "<GMuted User {} ({})>".format(self.name, self.user_id)
+
+    def to_dict(self):
+        return {
+            "user_id": self.user_id,
+            "name": self.name,
+            "reason": self.reason
+        }
+
+
+class AntispamSettings(BASE):
+    __tablename__ = "antispam_settings"
     chat_id = Column(String(14), primary_key=True)
     setting = Column(Boolean, default=True, nullable=False)
 
@@ -37,12 +63,19 @@ class GbanSettings(BASE):
 
 
 GloballyBannedUsers.__table__.create(checkfirst=True)
-GbanSettings.__table__.create(checkfirst=True)
+GloballyMutedUsers.__table__.create(checkfirst=True)
+AntispamSettings.__table__.create(checkfirst=True)
 
 GBANNED_USERS_LOCK = threading.RLock()
-GBAN_SETTING_LOCK = threading.RLock()
+ASPAM_SETTING_LOCK = threading.RLock()
 GBANNED_LIST = set()
 GBANSTAT_LIST = set()
+ANTISPAMSETTING = set()
+
+GMUTED_USERS_LOCK = threading.RLock()
+GMUTE_SETTING_LOCK = threading.RLock()
+GMUTED_LIST = set()
+GMUTESTAT_LIST = set()
 
 
 def gban_user(user_id, name, reason=None):
@@ -101,11 +134,11 @@ def get_gban_list():
         SESSION.close()
 
 
-def enable_gbans(chat_id):
-    with GBAN_SETTING_LOCK:
-        chat = SESSION.query(GbanSettings).get(str(chat_id))
+def enable_antispam(chat_id):
+    with ASPAM_SETTING_LOCK:
+        chat = SESSION.query(AntispamSettings).get(str(chat_id))
         if not chat:
-            chat = GbanSettings(chat_id, True)
+            chat = AntispamSettings(chat_id, True)
 
         chat.setting = True
         SESSION.add(chat)
@@ -114,11 +147,11 @@ def enable_gbans(chat_id):
             GBANSTAT_LIST.remove(str(chat_id))
 
 
-def disable_gbans(chat_id):
-    with GBAN_SETTING_LOCK:
-        chat = SESSION.query(GbanSettings).get(str(chat_id))
+def disable_antispam(chat_id):
+    with ASPAM_SETTING_LOCK:
+        chat = SESSION.query(AntispamSettings).get(str(chat_id))
         if not chat:
-            chat = GbanSettings(chat_id, False)
+            chat = AntispamSettings(chat_id, False)
 
         chat.setting = False
         SESSION.add(chat)
@@ -137,7 +170,10 @@ def num_gbanned_users():
 def __load_gbanned_userid_list():
     global GBANNED_LIST
     try:
-        GBANNED_LIST = {x.user_id for x in SESSION.query(GloballyBannedUsers).all()}
+        GBANNED_LIST = {
+            x.user_id
+            for x in SESSION.query(GloballyBannedUsers).all()
+        }
     finally:
         SESSION.close()
 
@@ -146,18 +182,112 @@ def __load_gban_stat_list():
     global GBANSTAT_LIST
     try:
         GBANSTAT_LIST = {
-            x.chat_id for x in SESSION.query(GbanSettings).all() if not x.setting
+            x.chat_id
+            for x in SESSION.query(AntispamSettings).all() if not x.setting
+        }
+    finally:
+        SESSION.close()
+
+
+#Gmute
+
+
+def gmute_user(user_id, name, reason=None):
+    with GMUTED_USERS_LOCK:
+        user = SESSION.query(GloballyMutedUsers).get(user_id)
+        if not user:
+            user = GloballyMutedUsers(user_id, name, reason)
+        else:
+            user.name = name
+            user.reason = reason
+
+        SESSION.merge(user)
+        SESSION.commit()
+        __load_gmuted_userid_list()
+
+
+def update_gmute_reason(user_id, name, reason=None):
+    with GMUTED_USERS_LOCK:
+        user = SESSION.query(GloballyMutedUsers).get(user_id)
+        if not user:
+            return False
+        user.name = name
+        user.reason = reason
+
+        SESSION.merge(user)
+        SESSION.commit()
+        return True
+
+
+def ungmute_user(user_id):
+    with GMUTED_USERS_LOCK:
+        user = SESSION.query(GloballyMutedUsers).get(user_id)
+        if user:
+            SESSION.delete(user)
+
+        SESSION.commit()
+        __load_gmuted_userid_list()
+
+
+def is_user_gmuted(user_id):
+    return user_id in GMUTED_LIST
+
+
+def get_gmuted_user(user_id):
+    try:
+        return SESSION.query(GloballyMutedUsers).get(user_id)
+    finally:
+        SESSION.close()
+
+
+def get_gmute_list():
+    try:
+        return [x.to_dict() for x in SESSION.query(GloballyMutedUsers).all()]
+    finally:
+        SESSION.close()
+
+
+def does_chat_gmute(chat_id):
+    return str(chat_id) not in GMUTESTAT_LIST
+
+
+def num_gmuted_users():
+    return len(GMUTED_LIST)
+
+
+def __load_gmuted_userid_list():
+    global GMUTED_LIST
+    try:
+        GMUTED_LIST = {
+            x.user_id
+            for x in SESSION.query(GloballyMutedUsers).all()
+        }
+    finally:
+        SESSION.close()
+
+
+def __load_gmute_stat_list():
+    global GMUTESTAT_LIST
+    try:
+        GMUTESTAT_LIST = {
+            x.chat_id
+            for x in SESSION.query(AntispamSettings).all() if not x.setting
         }
     finally:
         SESSION.close()
 
 
 def migrate_chat(old_chat_id, new_chat_id):
-    with GBAN_SETTING_LOCK:
-        chat = SESSION.query(GbanSettings).get(str(old_chat_id))
-        if chat:
-            chat.chat_id = new_chat_id
-            SESSION.add(chat)
+    with ASPAM_SETTING_LOCK:
+        gban = SESSION.query(AntispamSettings).get(str(old_chat_id))
+        if gban:
+            gban.chat_id = new_chat_id
+            SESSION.add(gban)
+
+        gmute = SESSION.query(AntispamSettings).get(str(old_chat_id))
+        if gmute:
+            gmute.chat_id = new_chat_id
+            SESSION.add(gmute)
 
         SESSION.commit()
 
@@ -165,3 +295,6 @@ def migrate_chat(old_chat_id, new_chat_id):
 # Create in memory userid to avoid disk access
 __load_gbanned_userid_list()
 __load_gban_stat_list()
+
+__load_gmuted_userid_list()
+__load_gmute_stat_list()

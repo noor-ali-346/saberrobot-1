@@ -6,7 +6,7 @@ from telegram.error import BadRequest, TelegramError
 from telegram.ext import run_async, CommandHandler, MessageHandler, Filters
 from telegram.utils.helpers import mention_html
 
-import tg_bot.modules.sql.global_ban_sql as sql
+import tg_bot.modules.sql.global_bans_sql as sql
 from tg_bot import (
     dispatcher,
     OWNER_ID,

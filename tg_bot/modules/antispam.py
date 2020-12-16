@@ -10,7 +10,7 @@ from telegram.ext import CommandHandler, MessageHandler, Filters, run_async
 from telegram.utils.helpers import mention_html
 
 import tg_bot.modules.sql.global_bans_sql as sql
-from tg_bot import dispatcher, OWNER_ID, SUDO_USERS, DEV_USERS, SUPPORT_USERS, WHITELIST_USERS, STRICT_GBAN, GBAN_LOGS, SUPPORT_CHAT, sw
+from tg_bot import dispatcher, OWNER_ID, SUDO_USERS, DEV_USERS, SUPPORT_USERS, WHITELIST_USERS, STRICT_GBAN, GBAN_LOGS, SUPPORT_CHAT, spamwtc
 from tg_bot.modules.helper_funcs.chat_status import user_admin, is_user_admin, support_plus, dev_plus, sudo_plus
 from tg_bot.modules.helper_funcs.extraction import extract_user, extract_user_and_text
 from tg_bot.modules.helper_funcs.misc import send_to_list
@@ -332,7 +332,7 @@ def check_and_ban(update, user_id, should_message=True):
     message = update.effective_message
     try:
         if sw != None:
-            sw_ban = sw.get_ban(user_id)
+            sw_ban = spamwtc.get_ban(user_id)
             if sw_ban:
                 spamwatch_reason = sw_ban.reason
                 chat.kick_member(user_id)

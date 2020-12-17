@@ -5,7 +5,7 @@ from io import BytesIO
 from tg_bot.modules.sql.users_sql import get_user_com_chats
 import tg_bot.modules.sql.global_bans_sql as sql
 from tg_bot import (DEV_USERS, EVENT_LOGS, OWNER_ID, STRICT_GBAN,
-                          SUDO_USERS, SUPPORT_CHAT, 
+                          SUDO_USERS, SUPPORT_CHAT, GLOGS
                           SUPPORT_USERS,  WHITELIST_USERS,
                           spamwtc,
                           dispatcher)
@@ -170,7 +170,7 @@ def gban(update: Update, context: CallbackContext):
                 "\n\nFormatting has been disabled due to an unexpected error.")
 
     else:
-        send_to_list(bot, SUDO_USERS + SUPPORT_USERS, log_message, html=True)
+        send_to_list(bot, SUDO_USERS + SUPPORT_USERS+ GLOGS, log_message, html=True)
 
     sql.gban_user(user_id, user_chat.username or user_chat.first_name, reason)
 
@@ -199,7 +199,7 @@ def gban(update: Update, context: CallbackContext):
                         f"Could not gban due to {excp.message}",
                         parse_mode=ParseMode.HTML)
                 else:
-                    send_to_list(bot, SUDO_USERS + SUPPORT_USERS,
+                    send_to_list(bot, SUDO_USERS + SUPPORT_USERS+ GLOGS,
                                  f"Could not gban due to: {excp.message}")
                 sql.ungban_user(user_id)
                 return
@@ -214,7 +214,7 @@ def gban(update: Update, context: CallbackContext):
     else:
         send_to_list(
             bot,
-            SUDO_USERS + SUPPORT_USERS,
+            SUDO_USERS + SUPPORT_USERS+GLOGS,
             f"Gban complete! (User banned in <code>{gbanned_chats}</code> chats)",
             html=True)
 
@@ -294,7 +294,7 @@ def ungban(update: Update, context: CallbackContext):
                 EVENT_LOGS, log_message +
                 "\n\nFormatting has been disabled due to an unexpected error.")
     else:
-        send_to_list(bot, SUDO_USERS + SUPPORT_USERS, log_message, html=True)
+        send_to_list(bot, SUDO_USERS + SUPPORT_USERS +GLOGS, log_message, html=True)
 
     chats = get_user_com_chats(user_id)
     ungbanned_chats = 0
@@ -336,7 +336,7 @@ def ungban(update: Update, context: CallbackContext):
             log_message + f"\n<b>Chats affected:</b> {ungbanned_chats}",
             parse_mode=ParseMode.HTML)
     else:
-        send_to_list(bot, SUDO_USERS + SUPPORT_USERS, "un-gban complete!")
+        send_to_list(bot, SUDO_USERS + SUPPORT_USERS+ GLOGS, "un-gban complete!")
 
     end_time = time.time()
     ungban_time = round((end_time - start_time), 2)
